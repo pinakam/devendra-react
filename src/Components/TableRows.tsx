@@ -1,7 +1,5 @@
 import React, {useState, useEffect } from "react";
 import axios from 'axios';
-import loadOptions from "./asyncOptions";
-import { AsyncPaginate } from "react-select-async-paginate";
 import Select from 'react-select';
 
 interface RowData {
@@ -33,7 +31,13 @@ function TableRows({ rowsData, deleteTableRows,handleChange }: TableRowsProps) {
     })
     .then(response => {
       console.log(response.data.results);
-      setOptions(response.data.results);
+      const transformed = response.data.results.map((item : any) =>(
+        {
+            value :item.id,
+            label : item.name
+        }
+      ))
+      setOptions(transformed)
     })
     .catch(err => console.log(err))
   }
