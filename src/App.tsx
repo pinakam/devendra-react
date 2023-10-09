@@ -1,24 +1,16 @@
-import React from 'react';
-import logo from './logo.svg';
 import './App.css';
-
+import Products from './Components/Products';
+import TableWithButtons from './Components/TableWithButtons';
 function App() {
   return (
     <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.tsx</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+
+      <br /><br /><br /><h2 style={{float:'left',marginLeft:'150px'}}>Fresh-stock in</h2>
+      <br /><br /><br />
+      
+      
+      <Products />
+      
     </div>
   );
 }
