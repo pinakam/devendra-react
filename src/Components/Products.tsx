@@ -1,8 +1,8 @@
 import React, {useState, useEffect } from 'react'
-import AsyncPaginate from "react-select-async-paginate";
 import axios from 'axios';
-import AddDeleteTableRows from './AddDeleteTableRows';
 import Select from 'react-select';
+import 'react-datepicker/dist/react-datepicker.css';
+import DatePicker from "react-datepicker";
 
 interface optionValues {
     value:number,
@@ -16,22 +16,20 @@ interface Row {
     expiry:string,
     qty:string
   }
-  
-const today = new Date();
-const date = today.setDate(today.getDate()); 
-const defaultValue = new Date(date).toISOString().split('T')[0] // yyyy-mm-dd
-
 
 const Products = () => {
 
-    const [options, setOptions] = useState<any>([{value:0,label:'Loading...'}]);
+    const [options, setOptions] = useState<optionValues[]>([{value:0,label:'Loading...'}]);
     const [selected, setSelected] = useState<optionValues>({value:0,label:'Select'});
     const [batch,setBatch] = useState<string>('');
-    const [expiry,setExpiry] = useState<string>(defaultValue);
+    const [expiry,setExpiry] = useState<Date>(new Date());
     const [qty,setQty] = useState<string>('');
-    const [rows, setRows] = useState<Row[]>([]);
+    const [rows, setRows] = useState<Row[]>([{ product: '', batch: '',expiry:'',qty:'' }]);
     const [newRow, setNewRow] = useState<Row>({ product: '', batch: '',expiry:'',qty:'' });
   
+    const token =localStorage.getItem('token')
+    const today = new Date();
+
     const loginData = {
         "email": "yagnikoo@yopmail.com",
         "password": "Moweb@123 ",
@@ -43,21 +41,20 @@ const Products = () => {
     const login = () => {
         axios.post('https://eaf-dms-api.yecor.com/api/auth/login',loginData)
         .then(response => {
-            console.log(response.data)
+           // console.log(response.data)
             localStorage.setItem('token',response.data.token)
         })
         .catch(err => console.log(err))
     }
 
     const getData = () => {
-        const token =localStorage.getItem('token')
         axios.get('https://eaf-dms-api.yecor.com/api/inventory/product-SKUs/?warehouse_id=22&ordering=name&search=&limit=100&offset=&remove_product_stocking=true',{
             headers: {
                 'Authorization': `Bearer ${token}`,
               },
         })
         .then(response => {
-          console.log(response.data.results);
+          //console.log(response.data.results);
           
           const transformed = response.data.results.map((item : any) =>(
             {
@@ -80,7 +77,7 @@ const Products = () => {
             {
                 "product_id": selected.value,
                 "batch_number": "#"+batch,
-                "expiry_date": expiry,
+                "expiry_date": expiry.toISOString().slice(0, 10),
                 "qty":qty
             }
             ],
@@ -88,28 +85,60 @@ const Products = () => {
             "stock_entry_type": "In",
             "receiver_warehouse_id": "62" 
       }
+
     const handleSubmit = (e:React.SyntheticEvent) =>{
         e.preventDefault();
-        console.log(finalData);
-        axios.post('https://eaf-dms-api.yecor.com/api/inventory/bulk_stock_in_out/',finalData,{withCredentials:true})
-        .then(response => {
-            console.log(response)
-            setBatch('')
-            setExpiry(defaultValue)
-            setQty('')
-        })
-        .catch(err => console.log(err))
+        if(batch ==='' || qty === '' || selected.value ===0){
+            alert("All fields are required")
+        }else{
+            console.log(finalData);
+            axios.post('https://eaf-dms-api.yecor.com/api/inventory/bulk_stock_in_out/',finalData,
+            { 
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                 },
+            })
+            .then(response => {
+                console.log(response)
+                setBatch('')
+                setExpiry(new Date())
+                setQty('')
+                alert('Data added')
+            })
+            .catch(err => console.log(err))
+        }
       }
 
     const handleReset = () =>{
+        setSelected({value:0,label:'Select'})
         setBatch('')
-        setExpiry(defaultValue)
+        setExpiry(new Date())
         setQty('')
+        setRows([{ product: '', batch: '',expiry:'',qty:'' }])
     }
 
     const addRow = () => {
         setRows([...rows, { ...newRow }]);
       };
+    
+    const removeRow = (index: number) => {
+        if(index > 0){
+            const updatedRows = [...rows];
+            updatedRows.splice(index, 1);
+            setRows(updatedRows);
+        }
+        else{
+            alert('One row is necessary')
+        }
+        
+      };
+    
+      const handleDateChange = (date : Date) => {
+        if (date >= today) {
+          setExpiry(date);
+        }
+      };
+
     useEffect(() => {
         login()
         getData()
@@ -117,13 +146,11 @@ const Products = () => {
 
   return (
     <>
-        {/* <AddDeleteTableRows /> */}
-
         <table className="table table-bordered table-hover table-striped">
             <thead>
                 <tr>
                 <th className="col-5">Product SKU</th>
-                <th className="col">Batch Number</th>
+                <th className="col-2">Batch Number</th>
                 <th className="col">Expiry Date</th>
                 <th className="col">Inward Qty</th>
                 <th>
@@ -134,27 +161,32 @@ const Products = () => {
                 </tr>
             </thead>
             <tbody>
-            <tr>
+            {rows.map((row, index) => (
+            <tr key={index}>
+
             <td>
               <Select options={options} onChange={handleChange}  />
             </td>
-            <td>
+            <td style={{display:'flex'}}>
+                <h4>#</h4>
              <input value={batch} type="number" onChange={(e) => setBatch(e.target.value)} className="form-control" placeholder="Batch No." required />
             </td>
             <td>
-              <input type='date' value={expiry} onChange={(e) => setExpiry(e.target.value)} defaultValue={defaultValue} />
+                <DatePicker
+                    selected={expiry}
+                    onChange={handleDateChange}
+                    minDate={today} />
             </td>
             <td>
               <input type="number" value={qty} onChange={(e) => setQty(e.target.value)}  className="form-control" placeholder="Type here" required />
             </td>
             <td>
-              <button
-                className="btn btn-outline-danger"
-              >
+              <button className="btn btn-outline-danger" onClick={() => removeRow(index)}>
                 x
               </button>
             </td>
           </tr>
+            ))}
             </tbody>
           </table>
           <button type='reset' value='Reset' onClick={handleReset} className="btn btn-danger">Reset </button> &nbsp;&nbsp;&nbsp;
